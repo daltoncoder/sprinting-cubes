@@ -147,7 +147,7 @@ fn process_cube(
             let val2 = cube_values[corner2];
 
             // Create cache key for this edge
-            let cache_key = create_edge_cache_key(pos1, pos2, edge);
+            let cache_key = create_edge_cache_key(cube_pos, edge);
 
             // Check if we've already calculated this edge intersection
             if let Some(&vertex_index) = vertex_cache.get(&cache_key) {
@@ -213,27 +213,34 @@ fn interpolate_edge(
 }
 
 fn create_edge_cache_key(
-    pos1: [f32; 3],
-    pos2: [f32; 3],
+    cube_pos: (usize, usize, usize),
     edge: usize,
 ) -> (usize, usize, usize, usize) {
-    // Create a consistent key regardless of edge direction
-    let (p1, p2) = if pos1[0] < pos2[0]
-        || (pos1[0] == pos2[0] && pos1[1] < pos2[1])
-        || (pos1[0] == pos2[0] && pos1[1] == pos2[1] && pos1[2] < pos2[2])
-    {
-        (pos1, pos2)
-    } else {
-        (pos2, pos1)
-    };
+    let (x, y, z) = cube_pos;
 
-    // Convert to integer coordinates for hashing
-    (
-        (p1[0] as usize) * 1000 + (p1[1] as usize) * 100 + (p1[2] as usize) * 10,
-        (p2[0] as usize) * 1000 + (p2[1] as usize) * 100 + (p2[2] as usize) * 10,
-        edge,
-        0, // Padding to make it a 4-tuple
-    )
+    // Create a unique key based on the cube position and edge number
+    // Each edge in 3D space has a unique position that can be shared between adjacent cubes
+    match edge {
+        // Bottom face edges (z level)
+        0 => (x, y, z, 100),     // Edge 0: (x,y,z) -> (x+1,y,z)
+        1 => (x + 1, y, z, 101), // Edge 1: (x+1,y,z) -> (x+1,y+1,z)
+        2 => (x, y + 1, z, 102), // Edge 2: (x+1,y+1,z) -> (x,y+1,z)
+        3 => (x, y, z, 103),     // Edge 3: (x,y+1,z) -> (x,y,z)
+
+        // Top face edges (z+1 level)
+        4 => (x, y, z + 1, 104),     // Edge 4: (x,y,z+1) -> (x+1,y,z+1)
+        5 => (x + 1, y, z + 1, 105), // Edge 5: (x+1,y,z+1) -> (x+1,y+1,z+1)
+        6 => (x, y + 1, z + 1, 106), // Edge 6: (x+1,y+1,z+1) -> (x,y+1,z+1)
+        7 => (x, y, z + 1, 107),     // Edge 7: (x,y+1,z+1) -> (x,y,z+1)
+
+        // Vertical edges
+        8 => (x, y, z, 108),          // Edge 8: (x,y,z) -> (x,y,z+1)
+        9 => (x + 1, y, z, 109),      // Edge 9: (x+1,y,z) -> (x+1,y,z+1)
+        10 => (x + 1, y + 1, z, 110), // Edge 10: (x+1,y+1,z) -> (x+1,y+1,z+1)
+        11 => (x, y + 1, z, 111),     // Edge 11: (x,y+1,z) -> (x,y+1,z+1)
+
+        _ => (x, y, z, edge), // Fallback
+    }
 }
 
 #[cfg(test)]
